@@ -4,6 +4,9 @@
 rm(foe)
 attach(foe_copy)
 
+#making this modificaiton for no reason
+
+
 
 women = c(which(foe_copy$dfem == 1))
 

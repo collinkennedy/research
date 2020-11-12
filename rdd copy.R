@@ -1,7 +1,7 @@
 library(haven)
 library(dplyr)
 library(ggplot2)
-foe <- read_dta("Dropbox/Ecn 198 2020 Fall/FOE Database/foe.dta")
+foe <- read_dta("/Users/collinkennedy/Dropbox/Ecn 198 2020 Fall/FOE Database/foe.dta")
 
 
 sample<-filter(foe,byr>=1901&byr<=1917) %>% #start subsetting, keep if birthyear >=1901
@@ -9,6 +9,7 @@ sample<-filter(foe,byr>=1901&byr<=1917) %>% #start subsetting, keep if birthyear
   mutate(before = byr<=1907) %>% #mutate adds new (categorical) variables to the dataframe
   mutate(after = byr>=1911) %>% #notice we create three new dummy variables 
   mutate(t = byr-1910) 
+View(sample)
 
 lm(data=sample, dage~after*t) %>% summary %>% print
 
