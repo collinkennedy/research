@@ -23,6 +23,7 @@
 #==========================================================================================#
 #rm(list = ls())
 library(tidyverse)
+library(haven)
 library(lfe) #for fixed effects
 library(stargazer) #for creating tables
 #rm(list=ls())
@@ -59,19 +60,75 @@ foe_copy<-foe_copy %>%
 table(foe_copy$duplicates) %>% print
 
 # drop duplicates
-foe<-filter(foe_copy,duplicates==1)
+foe_copy<-filter(foe_copy,duplicates==1)
 
 # make sure no missing pids
 stopifnot(nrow(filter(foe_copy,is.na(pid)))==0)
 
 
+#create an inherited wealth variable and attach it do the foe_copy dataset
 
 
 
 
+#create sons and fathers dataframes (tibbles)
+
+sons = foe_copy %>% 
+  filter(!is.na(pid_fath)) %>% #dont include values that are NA for pid_fath
+  filter(dfem==0) %>%         #keep all men
+  select(pid_son = pid, #personal id
+         dage_son = dage,  #death age of the son
+         dmarried_son = dmarried, #whether or not son married
+         ded_son=ded,            #whether or not received higher education
+         Occrank_son = Occrank, 
+         d21_son = d21,         #whether or not lived to 21
+         regbirth_son = regbirth, #region of birth 
+         pid_fath) #join predicate , father id
 
 
+fathers = foe_copy %>% 
+  mutate(inherited_lnwealth = (lnw/nbirth)) %>% #CHECK THIS
+  filter(!is.na(pid_fath)) %>% 
+  filter(dfem==0) %>% 
+  select(pid_fath = pid, #personal id assigned as pid_fath, join predicate
+         dage_fath = dage,  #death age of the son
+         dmarried_fath = dmarried, #whether or not son married
+         ded_fath=ded,            #whether or not received higher education
+         Occrank_fath = Occrank, 
+         d21_fath = d21,         #whether or not lived to 21
+         regbirth_fath = regbirth, #region of birth 
+         lnwealth_fath = lnw,
+         inherited_lnwealth)
 
+#merge sons and fathers
+sons_and_fathers = inner_join(sons,fathers)
+
+View(sons_and_fathers)
+
+
+#create brothers dataframe, then merge to create the family dataframe
+brothers = foe_copy %>% 
+  filter(!is.na(pid_fath)) %>% #dont include values that are NA for pid_fath
+  filter(dfem==0) %>%         #keep all men
+  select(pid_broth = pid, #personal id
+         dage_broth = dage,  #death age of the brother
+         dmarried_broth = dmarried, #whether or not bropther married
+         ded_broth=ded,            #whether or not received higher education
+         Occrank_broth = Occrank, 
+         d21_broth = d21,         #whether or not lived to 21
+         regbirth_broth = regbirth, #region of birth 
+         pid_fath) #join predicate , father id
+
+
+#create the family dataframe, will need to incorporate the inherited wealth variable later
+family = inner_join(sons_and_fathers,brothers) #noticed there are duplicates?
+#i know why, they are getting matched with themselves
+
+family = family %>% 
+  filter(pid_son<pid_broth) 
+
+View(family)#still duplicates..... assuming its because of multiple brothers
+#will that be a problem when it comes to building the model
 
 
 
