@@ -52,6 +52,10 @@ attach(foe_copy)
 
 #subset foe to create tibble including variables I intend to include in my model(s)
 
+
+
+  
+
 foe_copy<-foe_copy %>% 
   mutate(count=1) %>% #
   group_by(pid) %>% 
@@ -69,13 +73,22 @@ stopifnot(nrow(filter(foe_copy,is.na(pid)))==0)
 #create an inherited wealth variable and attach it do the foe_copy dataset
 
 
+#Merge Wives
+wives = foe_copy %>% 
+  filter(dfem==1) %>%
+  select(spouse_dage = dage,
+         pid_spouse1 = pid)
+
+View(wives)
+
 
 
 #create sons and fathers dataframes (tibbles)
 
 sons = foe_copy %>% 
   filter(!is.na(pid_fath)) %>% #dont include values that are NA for pid_fath
-  filter(dfem==0) %>%         #keep all men
+  filter(dfem==0) %>%#keep all men
+  left_join(wives) %>%  #left joining sons and wives
   select(pid_son = pid, #personal id
          dage_son = dage,  #death age of the son
          dmarried_son = dmarried, #whether or not son married
@@ -83,6 +96,7 @@ sons = foe_copy %>%
          Occrank_son = Occrank, 
          d21_son = d21,         #whether or not lived to 21
          regbirth_son = regbirth, #region of birth 
+         spouse_dage_son = spouse_dage,
          pid_fath) #join predicate , father id
 
 
@@ -110,6 +124,7 @@ View(sons_and_fathers)
 brothers = foe_copy %>% 
   filter(!is.na(pid_fath)) %>% #dont include values that are NA for pid_fath
   filter(dfem==0) %>%         #keep all men
+  left_join(wives) %>% #left join sons and wives
   select(pid_broth = pid, #personal id
          dage_broth = dage,  #death age of the brother
          dmarried_broth = dmarried, #whether or not bropther married
@@ -117,6 +132,7 @@ brothers = foe_copy %>%
          Occrank_broth = Occrank, 
          d21_broth = d21,         #whether or not lived to 21
          regbirth_broth = regbirth, #region of birth 
+         spouse_dage_broth = spouse_dage,
          pid_fath) #join predicate , father id
 
 
@@ -127,9 +143,10 @@ family = inner_join(sons_and_fathers,brothers) #noticed there are duplicates?
 family = family %>% 
   filter(pid_son<pid_broth) 
 
-View(family)#still duplicates..... assuming its because of multiple brothers
+View(select(family,pid_son,spouse_dage_son, pid_broth, spouse_dage_broth))#still duplicates..... assuming its because of multiple brothers
 #will that be a problem when it comes to building the model
 
+qf(.95,3,522)
 
 
 
