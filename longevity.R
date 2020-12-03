@@ -23,10 +23,11 @@
 #==========================================================================================#
 #rm(list = ls())
 library(tidyverse)
+library(ggplot2)
 library(haven)
 library(lfe) #for fixed effects
 library(stargazer) #for creating tables
-#rm(list=ls())
+rm(list=ls())
 
 #get data from FOE database
 foe_copy = read_dta("/Users/collinkennedy/Dropbox/Ecn 198 2020 Fall/FOE Database/foe.dta")
@@ -52,7 +53,7 @@ attach(foe_copy)
 
 #subset foe to create tibble including variables I intend to include in my model(s)
 
-
+#filter() retains all rows that satisfy the given condition
 
   
 
@@ -76,10 +77,10 @@ stopifnot(nrow(filter(foe_copy,is.na(pid)))==0)
 #Merge Wives
 wives = foe_copy %>% 
   filter(dfem==1) %>%
-  select(spouse_dage = dage,
+  select(spouse_dyr = dyr,
          pid_spouse1 = pid)
 
-View(wives)
+
 
 
 
@@ -87,7 +88,7 @@ View(wives)
 
 sons = foe_copy %>% 
   filter(!is.na(pid_fath)) %>% #dont include values that are NA for pid_fath
-  filter(dfem==0) %>%#keep all men
+  filter(dfem==0) %>% 
   left_join(wives) %>%  #left joining sons and wives
   select(pid_son = pid, #personal id
          dage_son = dage,  #death age of the son
@@ -96,13 +97,15 @@ sons = foe_copy %>%
          Occrank_son = Occrank, 
          d21_son = d21,         #whether or not lived to 21
          regbirth_son = regbirth, #region of birth 
-         spouse_dage_son = spouse_dage,
+         spouse_dyr_son = spouse_dyr,
+         myr1_son = myr1, #year of first marriage
          pid_fath) #join predicate , father id
+
+
 
 
 fathers = foe_copy %>% 
   mutate(inherited_lnwealth = (lnw/nbirth)) %>% #CHECK THIS
-  filter(!is.na(pid_fath)) %>% 
   filter(dfem==0) %>% 
   select(pid_fath = pid, #personal id assigned as pid_fath, join predicate
          dage_fath = dage,  #death age of the son
@@ -114,10 +117,13 @@ fathers = foe_copy %>%
          lnwealth_fath = lnw,
          inherited_lnwealth)
 
+nrow(sons)
+
 #merge sons and fathers
 sons_and_fathers = inner_join(sons,fathers)
+nrow(sons_and_fathers)
 
-View(sons_and_fathers)
+
 
 
 #create brothers dataframe, then merge to create the family dataframe
@@ -132,7 +138,8 @@ brothers = foe_copy %>%
          Occrank_broth = Occrank, 
          d21_broth = d21,         #whether or not lived to 21
          regbirth_broth = regbirth, #region of birth 
-         spouse_dage_broth = spouse_dage,
+         spouse_dyr_broth = spouse_dyr,
+         myr1_broth = myr1,
          pid_fath) #join predicate , father id
 
 
@@ -143,21 +150,105 @@ family = inner_join(sons_and_fathers,brothers) #noticed there are duplicates?
 family = family %>% 
   filter(pid_son<pid_broth) 
 
-View(select(family,pid_son,spouse_dage_son, pid_broth, spouse_dage_broth))#still duplicates..... assuming its because of multiple brothers
-#will that be a problem when it comes to building the model
-
-qf(.95,3,522)
 
 
 
+#=========================================================================================
+#Ylongevity= β0+ β1Xdmarried+ β2Xded + β3XOccrank + 
+#β4Xd21 + β5Xregbirt h +β6XinheritedLnwealth
+
+#H0: dmarried = 0
+#H1:dmarried != 0 
+#=========================================================================================
+#build linear model 1
+ggplot(data=family, mapping = aes(x = dmarried_son, y = dage_son))+
+  geom_point()
+
+#use robust standard errors here, bring in sandwich and lmtest packages
+model1 = lm(dage_son ~ dmarried_son + ded_son + Occrank_son
+            + d21_son + regbirth_son + inherited_lnwealth, data = family)
+
+summary(model1)
+
+mean(family$Occrank_son, na.rm = TRUE)
+?mean
 
 
 
+detach(family)
+#========================================================================================
+#H0: ∆Xdmarried= 0 (dmarried_son - dmarried_broth)
+#Ha: ∆Xdmarried6 != 0
+
+#∆Ylongevity=β0+β1∆Xdmarried+β2∆Xded+β3∆XOccrank+β4∆Xd21+β5∆Xregbirth
+#========================================================================================
+#define variables:
+regSample2 = family %>% filter(d21_son == 1 & d21_broth == 1)
+
+delta_dage = regSample2$dage_son - regSample2$dage_broth
+delta_dmarried = regSample2$dmarried_son - regSample2$dmarried_broth
+delta_ded = regSample2$ded_son - regSample2$ded_broth
+delta_Occrank = regSample2$Occrank_son - regSample2$Occrank_broth
+delta_d21 = regSample2$d21_son - regSample2$d21_broth
+same_regbirth = regSample2$regbirth_son == regSample2$regbirth_broth #categorical
+
+
+#try some other death age cut offs.............
+
+#linear model 2
+model2 = lm(delta_dage ~ delta_dmarried + delta_ded + 
+              delta_Occrank + delta_d21 + same_regbirth)
+
+#decade of birth, control for
+
+summary(model2)
+
+stargazer(model2, type = "text")
 
 
 
+#=======================================================================================
+#Comparing longevity between people who were married for (basically) their entire life
+#versus people who married, but whose spouse died early in the marriage
+
+#how to implement?
+
+regSample3 = family %>% filter(dmarried_broth == 1 & dmarried_son == 1)%>% 
+  filter(d21_son == 1 & d21_broth == 1)#only want to consider when both brothers are married
+
+delta_dage = regSample3$dage_son - regSample3$dage_broth
+#delta_dmarried = regSample$dmarried_son - regSample$dmarried_broth, don't need
+delta_ded = regSample3$ded_son - regSample3$ded_broth
+delta_Occrank = regSample3$Occrank_son - regSample3$Occrank_broth
+delta_d21 = regSample3$d21_son - regSample3$d21_broth
+same_regbirth = regSample3$regbirth_son == regSample3$regbirth_broth
+
+long_marriage_son = regSample3$spouse_dyr_son - regSample3$myr1_son > 10 #categorical variable
+long_marriage_broth = regSample3$spouse_dyr_broth - regSample3$myr1_broth > 10
+
+delta_long_marriage = long_marriage_son - long_marriage_broth #1 if long, 0 otherwise (short)
 
 
+model3 = lm(delta_dage ~ delta_long_marriage + delta_ded + 
+              delta_Occrank + same_regbirth)
+
+summary(model3)
+
+#current output: if the first brother's wife lives longer than 10 years after marriage, whereas 
+#the second brother's wife does NOT, then the life expectancy of the first brother is about 
+#2 years longer than the second brother's life expectancy, on average, ceteris parabus.
+
+
+
+#=======================================================================================
+
+#Model 3 Robustness Check
+
+#=======================================================================================
+#drop people who die in the same year as their wife
+#add death year variable to son and broth
+
+#in regsample3
 
 
 
