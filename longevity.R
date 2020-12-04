@@ -25,6 +25,7 @@
 library(tidyverse)
 library(ggplot2)
 library(haven)
+library(estimatr)
 library(lfe) #for fixed effects
 library(stargazer) #for creating tables
 rm(list=ls())
@@ -138,8 +139,8 @@ brothers = foe_copy %>%
          Occrank_broth = Occrank, 
          d21_broth = d21,         #whether or not lived to 21
          regbirth_broth = regbirth, #region of birth 
-         spouse_dyr_broth = spouse_dyr,
-         myr1_broth = myr1,
+         spouse_dyr_broth = spouse_dyr, #the death year of the brother's spouse
+         myr1_broth = myr1, #the year the brother got married
          pid_fath) #join predicate , father id
 
 
@@ -148,7 +149,7 @@ family = inner_join(sons_and_fathers,brothers) #noticed there are duplicates?
 #i know why, they are getting matched with themselves
 
 family = family %>% 
-  filter(pid_son<pid_broth) 
+  filter(pid_son<pid_broth) #make sure there is no matching of sons to themselves 
 
 
 
@@ -183,7 +184,8 @@ detach(family)
 #∆Ylongevity=β0+β1∆Xdmarried+β2∆Xded+β3∆XOccrank+β4∆Xd21+β5∆Xregbirth
 #========================================================================================
 #define variables:
-regSample2 = family %>% filter(d21_son == 1 & d21_broth == 1)
+regSample2 = family %>% filter(d21_son == 1 & d21_broth == 1) #only want to consider brothers that live until at 
+                                                              #least 21
 
 delta_dage = regSample2$dage_son - regSample2$dage_broth
 delta_dmarried = regSample2$dmarried_son - regSample2$dmarried_broth
@@ -195,9 +197,11 @@ same_regbirth = regSample2$regbirth_son == regSample2$regbirth_broth #categorica
 
 #try some other death age cut offs.............
 
+?lm_robust()
 #linear model 2
 model2 = lm(delta_dage ~ delta_dmarried + delta_ded + 
-              delta_Occrank + delta_d21 + same_regbirth)
+              delta_Occrank + delta_d21 + same_regbirth) #Am i picking up an upward trend in longevity that I'm
+                                                          #not controlling for -> appropriate to use time fixed effects?
 
 #decade of birth, control for
 
@@ -206,6 +210,15 @@ summary(model2)
 stargazer(model2, type = "text")
 
 
+#output interpretation: Reject the null hypothesis at the 5% significance level in favor
+#of the alternative hypothesis, and conclude that delta_dmarried has a nonzero effect on the difference in 
+#death age between brothers.
+
+#In other words, for brothers who both live to at least 21, the brother who gets married lives about 13.6 years
+#longer on average, holding difference in educational achievement, difference in occupation rank,.
+
+#dmarried in the first model /delta_dmarried in the second model coefficient(s) must be  picking up the effect of a factor I am not controlling for but
+#i have no idea what it is
 
 #=======================================================================================
 #Comparing longevity between people who were married for (basically) their entire life
@@ -223,11 +236,17 @@ delta_Occrank = regSample3$Occrank_son - regSample3$Occrank_broth
 delta_d21 = regSample3$d21_son - regSample3$d21_broth
 same_regbirth = regSample3$regbirth_son == regSample3$regbirth_broth
 
-long_marriage_son = regSample3$spouse_dyr_son - regSample3$myr1_son > 10 #categorical variable
+long_marriage_son = regSample3$spouse_dyr_son - regSample3$myr1_son > 10 #categorical variable- 
+#if the marriage lasts at least 10 years before the spouse dies, then  ->1 , else 0
+
+#same thing but for the brother
 long_marriage_broth = regSample3$spouse_dyr_broth - regSample3$myr1_broth > 10
 
-delta_long_marriage = long_marriage_son - long_marriage_broth #1 if long, 0 otherwise (short)
-
+#if the difference is greater than 
+delta_long_marriage = long_marriage_son - long_marriage_broth #
+#1 if son has a long marriage but broth has a short marriage
+#0 if son and brother have "equal length" marriage
+#-1 if son has a SHORT marriage and broth has a long marriage
 
 model3 = lm(delta_dage ~ delta_long_marriage + delta_ded + 
               delta_Occrank + same_regbirth)
