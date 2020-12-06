@@ -171,12 +171,9 @@ model1 = lm(dage_son ~ dmarried_son + ded_son + Occrank_son
 
 summary(model1)
 
-mean(family$Occrank_son, na.rm = TRUE)
-?mean
 
 
 
-detach(family)
 #========================================================================================
 #H0: ∆Xdmarried= 0 (dmarried_son - dmarried_broth)
 #Ha: ∆Xdmarried6 != 0
@@ -185,7 +182,15 @@ detach(family)
 #========================================================================================
 #define variables:
 regSample2 = family %>% filter(d21_son == 1 & d21_broth == 1) #only want to consider brothers that live until at 
-                                                              #least 21
+                                                             #least 21
+
+
+#only want to consider people to live to at least 40
+
+
+
+#don't include people getting married after 40
+
 
 delta_dage = regSample2$dage_son - regSample2$dage_broth
 delta_dmarried = regSample2$dmarried_son - regSample2$dmarried_broth
@@ -200,7 +205,7 @@ same_regbirth = regSample2$regbirth_son == regSample2$regbirth_broth #categorica
 ?lm_robust()
 #linear model 2
 model2 = lm(delta_dage ~ delta_dmarried + delta_ded + 
-              delta_Occrank + delta_d21 + same_regbirth) #Am i picking up an upward trend in longevity that I'm
+              delta_Occrank + same_regbirth) #Am i picking up an upward trend in longevity that I'm
                                                           #not controlling for -> appropriate to use time fixed effects?
 
 #decade of birth, control for
@@ -224,7 +229,8 @@ stargazer(model2, type = "text")
 #Comparing longevity between people who were married for (basically) their entire life
 #versus people who married, but whose spouse died early in the marriage
 
-#how to implement?
+
+#========================================================================================
 
 regSample3 = family %>% filter(dmarried_broth == 1 & dmarried_son == 1)%>% 
   filter(d21_son == 1 & d21_broth == 1)#only want to consider when both brothers are married
