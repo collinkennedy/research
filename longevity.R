@@ -32,8 +32,7 @@ rm(list=ls())
 
 #get data from FOE database
 foe_copy = read_dta("/Users/collinkennedy/Dropbox/Ecn 198 2020 Fall/FOE Database/foe.dta")
-View(foe_copy)
-attach(foe_copy)
+
 
 #men = foe_copy %>% 
   #filter(dfem == 0) #filter out the women so its only men
@@ -56,6 +55,11 @@ attach(foe_copy)
 
 #filter() retains all rows that satisfy the given condition
 
+
+#add d40 variable (indicator{1-> lived to 40, 0-> otherwise})
+foe_copy = foe_copy %>% 
+  mutate(d40 = ifelse(dage >= 40, 1, 0))
+
   
 
 foe_copy<-foe_copy %>% 
@@ -75,12 +79,16 @@ stopifnot(nrow(filter(foe_copy,is.na(pid)))==0)
 #create an inherited wealth variable and attach it do the foe_copy dataset
 
 
+
 #Merge Wives
 wives = foe_copy %>% 
   filter(dfem==1) %>%
   select(spouse_dyr = dyr,
-         pid_spouse1 = pid)
+         pid_spouse1 = pid,
+         spouse_d40 = d40,
+         spouse_byr = byr)
 
+View(wives)
 
 
 
@@ -99,12 +107,16 @@ sons = foe_copy %>%
          d21_son = d21,         #whether or not lived to 21
          regbirth_son = regbirth, #region of birth 
          spouse_dyr_son = spouse_dyr,
+         spouse_d40_son = spouse_d40,
+         byr_son = byr,
+         d40_son = d40,
          myr1_son = myr1, #year of first marriage
          pid_fath) #join predicate , father id
 
+view(sons)
 
 
-
+#don't care about father's birth year so not going to add it
 fathers = foe_copy %>% 
   mutate(inherited_lnwealth = (lnw/nbirth)) %>% #CHECK THIS
   filter(dfem==0) %>% 
@@ -118,11 +130,11 @@ fathers = foe_copy %>%
          lnwealth_fath = lnw,
          inherited_lnwealth)
 
-nrow(sons)
+
 
 #merge sons and fathers
 sons_and_fathers = inner_join(sons,fathers)
-nrow(sons_and_fathers)
+
 
 
 
@@ -134,13 +146,16 @@ brothers = foe_copy %>%
   left_join(wives) %>% #left join sons and wives
   select(pid_broth = pid, #personal id
          dage_broth = dage,  #death age of the brother
-         dmarried_broth = dmarried, #whether or not bropther married
+         dmarried_broth = dmarried, #whether or not brother married
          ded_broth=ded,            #whether or not received higher education
          Occrank_broth = Occrank, 
          d21_broth = d21,         #whether or not lived to 21
          regbirth_broth = regbirth, #region of birth 
          spouse_dyr_broth = spouse_dyr, #the death year of the brother's spouse
+         spouse_d40_broth = spouse_d40,
          myr1_broth = myr1, #the year the brother got married
+         byr_broth = byr,
+         d40_broth = d40,
          pid_fath) #join predicate , father id
 
 
@@ -150,6 +165,13 @@ family = inner_join(sons_and_fathers,brothers) #noticed there are duplicates?
 
 family = family %>% 
   filter(pid_son<pid_broth) #make sure there is no matching of sons to themselves 
+
+
+
+view(family)
+
+
+
 
 
 
