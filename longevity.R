@@ -76,7 +76,7 @@ foe_copy<-filter(foe_copy,duplicates==1)
 stopifnot(nrow(filter(foe_copy,is.na(pid)))==0)
 
 
-#create an inherited wealth variable and attach it do the foe_copy dataset
+
 
 
 
@@ -88,7 +88,7 @@ wives = foe_copy %>%
          spouse_d40 = d40,
          spouse_byr = byr)
 
-View(wives)
+
 
 
 
@@ -113,7 +113,7 @@ sons = foe_copy %>%
          myr1_son = myr1, #year of first marriage
          pid_fath) #join predicate , father id
 
-view(sons)
+
 
 
 #don't care about father's birth year so not going to add it
@@ -168,12 +168,6 @@ family = family %>%
 
 
 
-view(family)
-
-
-
-
-
 
 
 #=========================================================================================
@@ -189,12 +183,12 @@ ggplot(data=family, mapping = aes(x = dmarried_son, y = dage_son))+
 
 #use robust standard errors here, bring in sandwich and lmtest packages
 model1 = lm(dage_son ~ dmarried_son + ded_son + Occrank_son
-            + d21_son + regbirth_son + inherited_lnwealth, data = family)
+            + d40_son + regbirth_son + inherited_lnwealth, data = family)
 
 summary(model1)
 
 
-
+dfdff
 
 #========================================================================================
 #H0: ∆Xdmarried= 0 (dmarried_son - dmarried_broth)
@@ -203,7 +197,10 @@ summary(model1)
 #∆Ylongevity=β0+β1∆Xdmarried+β2∆Xded+β3∆XOccrank+β4∆Xd21+β5∆Xregbirth
 #========================================================================================
 #define variables:
-regSample2 = family %>% filter(d21_son == 1 & d21_broth == 1) #only want to consider brothers that live until at 
+
+#changed the filtering from requiring both son and brother to live 
+#to at least 21, to having to live to at least age 40
+regSample2 = family %>% filter(d40_son == 1 & d40_broth == 1) #only want to consider brothers that live until at 
                                                              #least 21
 
 
@@ -224,7 +221,7 @@ same_regbirth = regSample2$regbirth_son == regSample2$regbirth_broth #categorica
 
 #try some other death age cut offs.............
 
-?lm_robust()
+#?lm_robust()
 #linear model 2
 model2 = lm(delta_dage ~ delta_dmarried + delta_ded + 
               delta_Occrank + same_regbirth) #Am i picking up an upward trend in longevity that I'm
@@ -241,8 +238,16 @@ stargazer(model2, type = "text")
 #of the alternative hypothesis, and conclude that delta_dmarried has a nonzero effect on the difference in 
 #death age between brothers.
 
+#when filtering on d21_son and d21_broth == 1
 #In other words, for brothers who both live to at least 21, the brother who gets married lives about 13.6 years
 #longer on average, holding difference in educational achievement, difference in occupation rank,.
+
+
+#when filtering on d40_son and d40_broth == 1
+#In other words, for brothers who both live to at least 40, the brother who gets married lives about 2.73 years
+#longer on average, holding difference in educational achievement, difference in occupation rank,.
+
+
 
 #dmarried in the first model /delta_dmarried in the second model coefficient(s) must be  picking up the effect of a factor I am not controlling for but
 #i have no idea what it is
