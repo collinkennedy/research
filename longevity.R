@@ -60,7 +60,7 @@ foe_copy = read_dta("/Users/collinkennedy/Dropbox/Ecn 198 2020 Fall/FOE Database
 foe_copy = foe_copy %>% 
   mutate(d40 = ifelse(dage >= 40, 1, 0))
 
-  
+
 
 foe_copy<-foe_copy %>% 
   mutate(count=1) %>% #
@@ -188,7 +188,7 @@ model1 = lm(dage_son ~ dmarried_son + ded_son + Occrank_son
 summary(model1)
 
 
-dfdff
+
 
 #========================================================================================
 #H0: ∆Xdmarried= 0 (dmarried_son - dmarried_broth)
@@ -204,13 +204,20 @@ regSample2 = family %>% filter(d40_son == 1 & d40_broth == 1) #only want to cons
                                                              #least 21
 
 
-#only want to consider people to live to at least 40
-
-
-
 #don't include people getting married after 40
+regSample2 = regSample2 %>% 
+  filter((myr1_son < byr_son + 40)) %>% 
+  
+#if their marriage year is less than their birth year + 40, keep
+
+#DID I DO THIS RIGHT??
 
 
+
+nrow(regSample2)
+
+
+#define differenced variables
 delta_dage = regSample2$dage_son - regSample2$dage_broth
 delta_dmarried = regSample2$dmarried_son - regSample2$dmarried_broth
 delta_ded = regSample2$ded_son - regSample2$ded_broth
@@ -248,9 +255,11 @@ stargazer(model2, type = "text")
 #longer on average, holding difference in educational achievement, difference in occupation rank,.
 
 
+#when filtering on d40_son and d40_broth == 1, but only looking at brothers
+#who also married before age 40, the son who got married appears to live about 3.2
+#years longer on average
 
-#dmarried in the first model /delta_dmarried in the second model coefficient(s) must be  picking up the effect of a factor I am not controlling for but
-#i have no idea what it is
+
 
 #=======================================================================================
 #Comparing longevity between people who were married for (basically) their entire life
@@ -260,7 +269,13 @@ stargazer(model2, type = "text")
 #========================================================================================
 
 regSample3 = family %>% filter(dmarried_broth == 1 & dmarried_son == 1)%>% 
-  filter(d21_son == 1 & d21_broth == 1)#only want to consider when both brothers are married
+  filter(d40_son == 1 & d40_broth == 1)#only want to consider when both brothers are married
+#filter on d40 instead of d21 (only include brothers living to at least age 40)
+
+
+#like in model 2, don't include people getting married after 40
+regSample3 = regSample3 %>% 
+  filter((myr1_son < byr_son + 40))
 
 delta_dage = regSample3$dage_son - regSample3$dage_broth
 #delta_dmarried = regSample$dmarried_son - regSample$dmarried_broth, don't need
@@ -286,10 +301,17 @@ model3 = lm(delta_dage ~ delta_long_marriage + delta_ded +
 
 summary(model3)
 
+
+#filtering on d21 and considering marriages at any point in time
 #current output: if the first brother's wife lives longer than 10 years after marriage, whereas 
 #the second brother's wife does NOT, then the life expectancy of the first brother is about 
 #2 years longer than the second brother's life expectancy, on average, ceteris parabus.
 
+
+#filtering on d40 and only considering marriages where the son and brother are 
+#younger than 40
+#there appears to be no statistically discernible difference in longevity
+#between brothers who both marry before 40, who live to at least 40, but 
 
 
 #=======================================================================================
