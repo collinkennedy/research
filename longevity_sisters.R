@@ -157,6 +157,16 @@ family = family %>%
 ggplot(data=family, mapping = aes(x = dmarried_daughter, y = dage_daughter))+
   geom_point()
 
+plotData = family %>% mutate(dage_daughter = round(dage_daughter,0)) %>% 
+  group_by(dage_daughter) %>% 
+  summarize(dmarried_daughter = mean(as.numeric(dmarried_daughter),na.rm =TRUE))
+plotData
+
+
+ggplot(data = plotData, mapping = aes(x = dage_daughter,y = dmarried_daughter))+
+  geom_point()
+
+
 #use robust standard errors here, bring in sandwich and lmtest packages
 model1 = lm(dage_daughter ~ dmarried_daughter + ded_daughter 
             + d40_daughter + regbirth_daughter + inherited_lnwealth, data = family)
