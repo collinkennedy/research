@@ -30,8 +30,10 @@ library(lfe) #for fixed effects
 library(stargazer) #for creating tables
 rm(list=ls())
 
+
+?stargazer
 #get data from FOE database
-foe_copy = read_dta("/Users/collinkennedy/Dropbox/Ecn 198 2020 Fall/FOE Database/foe.dta")
+foe_copy = read_dta("/Users/collinkennedy/Dropbox/Ecn 198 2020 Fall/FOE Database/foe2020.dta")
 
 
 #men = foe_copy %>% 
@@ -73,7 +75,7 @@ table(foe_copy$duplicates) %>% print
 foe_copy<-filter(foe_copy,duplicates==1)
 
 # make sure no missing pids
-stopifnot(nrow(filter(foe_copy,is.na(pid)))==0)
+#stopifnot(nrow(filter(foe_copy,is.na(pid)))==0)
 
 
 
@@ -117,7 +119,8 @@ sons = foe_copy %>%
 
 
 #don't care about father's birth year so not going to add it
-fathers = foe_copy %>% 
+fathers = foe_copy %>%
+  filter(lnw != 0 & nbirth != 0) %>% 
   mutate(inherited_lnwealth = (lnw/nbirth)) %>% #CHECK THIS
   filter(dfem==0) %>% 
   select(pid_fath = pid, #personal id assigned as pid_fath, join predicate
@@ -130,7 +133,7 @@ fathers = foe_copy %>%
          lnwealth_fath = lnw,
          inherited_lnwealth)
 
-
+View(fathers)
 
 #merge sons and fathers
 sons_and_fathers = inner_join(sons,fathers)
@@ -202,15 +205,19 @@ ggplot(data = plotData40, mapping = aes(x = dage_son, y = dmarried_son))+
   #geom_point()
 
 #use robust standard errors here, bring in sandwich and lmtest packages
-model1 = felm(dage_son ~ dmarried_son + ded_son + Occrank_son
-            + d40_son + regbirth_son + inherited_lnwealth|byr_son, data = family)#used byr_son as 
-                                                                                #time fixed effect 
+model1 = felm(dage_son ~ dmarried_son + ded_son + Occrank_son + d40_son + regbirth_son + inherited_lnwealth| byr_son, data = family)#used byr_son as 
+
+lm(dage_son~dmarried_son +ded_son + Occrank_son + d40_son + regbirth_son + inherited_lnwealth, data=family)                                                                                #time fixed effect 
 #allow me to indirectly control for factors that are varying over time (this dataset
 #spans a significant period of time)
 
 summary(model1)
 
 
+
+stargazer(model1,type = "text", title = "Regression Table: Model 1")
+stargazer(type = "latex", model1, title = "Regression Table: Model 1",
+          out = "/Users/collinkennedy/Google Drive/UC Davis/UC Davis/fall_quarter_2020/ECN198-Research/model1out.png")
 
 #========================================================================================
 #H0: ∆Xdmarried= 0 (dmarried_son - dmarried_broth)
@@ -261,7 +268,7 @@ model2 = felm(delta_dage ~ delta_dmarried + delta_ded +
 
 summary(model2)
 
-stargazer(model2, type = "text")
+stargazer(model2, type = "text", title = "Regression Table: Model 2")
 
 
 #output interpretation: Reject the null hypothesis at the 5% significance level in favor
@@ -322,11 +329,11 @@ delta_Occrank = regSample3$Occrank_son - regSample3$Occrank_broth
 delta_d21 = regSample3$d21_son - regSample3$d21_broth
 same_regbirth = regSample3$regbirth_son == regSample3$regbirth_broth
 
-long_marriage_son = regSample3$spouse_dyr_son - regSample3$myr1_son > 10 #categorical variable- 
+long_marriage_son = regSample3$spouse_dyr_son - regSample3$myr1_son > 30 #categorical variable- 
 #if the marriage lasts at least 10 years before the spouse dies, then  ->1 , else 0
 
 #same thing but for the brother
-long_marriage_broth = regSample3$spouse_dyr_broth - regSample3$myr1_broth > 10
+long_marriage_broth = regSample3$spouse_dyr_broth - regSample3$myr1_broth > 30
 
 #if the difference is greater than 
 delta_long_marriage = long_marriage_son - long_marriage_broth #
@@ -440,7 +447,7 @@ delta_long_marriage = long_marriage_son - long_marriage_broth #
 #0 if son and brother have "equal length" marriage
 #-1 if son has a SHORT marriage and broth has a long marriage
 
-model3 = lm(delta_dage ~ delta_long_marriage + + delta_long_marriage*delta_long_marriage +
+model3 = lm(delta_dage ~ delta_long_marriage + delta_long_marriage*delta_long_marriage +
               delta_ded + 
               delta_Occrank + same_regbirth)
 
