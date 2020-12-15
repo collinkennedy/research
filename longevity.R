@@ -204,7 +204,7 @@ ggplot(data = plotData40, mapping = aes(x = dage_son, y = dmarried_son))+
 #ggplot(data=family, mapping = aes(x = dmarried_son, y = dage_son))+
   #geom_point()
 
-#use robust standard errors here, bring in sandwich and lmtest packages
+
 model1 = felm(dage_son ~ dmarried_son + ded_son + Occrank_son + d40_son + regbirth_son + inherited_lnwealth| byr_son, data = family)#used byr_son as 
 
 lm(dage_son~dmarried_son +ded_son + Occrank_son + d40_son + regbirth_son + inherited_lnwealth, data=family)                                                                                #time fixed effect 
@@ -245,8 +245,6 @@ regSample2 = regSample2 %>%
 
 
 
-
-
 #define differenced variables
 delta_dage = regSample2$dage_son - regSample2$dage_broth
 delta_dmarried = regSample2$dmarried_son - regSample2$dmarried_broth
@@ -269,7 +267,8 @@ model2 = felm(delta_dage ~ delta_dmarried + delta_ded +
 summary(model2)
 
 stargazer(model2, type = "text", title = "Regression Table: Model 2")
-
+stargazer(model2, type = "latex", title = "Regression Table: Model 2",
+          out = "/Users/collinkennedy/Google Drive/UC Davis/UC Davis/fall_quarter_2020/ECN198-Research/model2out.png")
 
 #output interpretation: Reject the null hypothesis at the 5% significance level in favor
 #of the alternative hypothesis, and conclude that delta_dmarried has a nonzero effect on the difference in 
@@ -345,6 +344,9 @@ model3 = lm(delta_dage ~ delta_long_marriage + delta_ded +
               delta_Occrank + same_regbirth)
 
 summary(model3)
+stargazer(model3, type = "text", title = "Regression Table: Model 3")
+stargazer(model3, type = "latex", title = "Regression Table: Model 3",
+          out = "/Users/collinkennedy/Google Drive/UC Davis/UC Davis/fall_quarter_2020/ECN198-Research/model3out.png")
 
 
 #filtering on d21 and considering marriages at any point in time
