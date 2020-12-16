@@ -66,6 +66,7 @@ foe_copy = foe_copy %>%
 
 
 
+
 foe_copy<-foe_copy %>% 
   mutate(count=1) %>% #
   group_by(pid) %>% 
@@ -224,7 +225,7 @@ summary(model1)
 
 stargazer(model1,type = "text", title = "Regression Table: Model 1")
 stargazer(type = "latex", model1, title = "Regression Table: Model 1",
-          out = "/Users/collinkennedy/Google Drive/UC Davis/UC Davis/fall_quarter_2020/ECN198-Research/model1out.png")
+          out = "/Users/collinkennedy/Google Drive/UC Davis/UC Davis/fall_quarter_2020/ECN198-Research/model1out.tex")
 
 #========================================================================================
 #H0: ∆Xdmarried= 0 (dmarried_son - dmarried_broth)
@@ -275,7 +276,7 @@ summary(model2)
 
 stargazer(model2, type = "text", title = "Regression Table: Model 2")
 stargazer(model2, type = "latex", title = "Regression Table: Model 2",
-          out = "/Users/collinkennedy/Google Drive/UC Davis/UC Davis/fall_quarter_2020/ECN198-Research/model2out.png")
+          out = "/Users/collinkennedy/Google Drive/UC Davis/UC Davis/fall_quarter_2020/ECN198-Research/model2out.tex")
 
 #output interpretation: Reject the null hypothesis at the 5% significance level in favor
 #of the alternative hypothesis, and conclude that delta_dmarried has a nonzero effect on the difference in 
@@ -322,12 +323,7 @@ regSample3 = family %>% filter(dmarried_broth == 1 & dmarried_son == 1)%>%
 #filter on d40 instead of d21 (only include brothers living to at least age 40)
 
 
-part1<-filter(regSample3, marriage_length_diff>=0)
-part2<-filter(regSample3,marriage_legth_diff<0)%>%
-  mutate(marriage_length_diff = -1*marriage_length_diff)%>%
-  mutate(delta_dage = -1*delta_dage)
 
-regSample3<-bind_rows(part1,part2)
 
 
 
@@ -431,17 +427,18 @@ death_age_plot
 
 
 
-summary(model4)$se
-summaryModel4 = summary(model4)
-summaryModel4$coefficients[,c(2)]
-
-summary(model4)$coef[,2]
-
 summary(model3)
 stargazer(model3, type = "text", title = "Regression Table: Model 3")
 stargazer(model3, type = "latex", title = "Regression Table: Model 3",
-          out = "/Users/collinkennedy/Google Drive/UC Davis/UC Davis/fall_quarter_2020/ECN198-Research/model3out.png")
+          out = "/Users/collinkennedy/Google Drive/UC Davis/UC Davis/fall_quarter_2020/ECN198-Research/model3out.tex")
 
+
+#stargazer table with all the results from each model
+
+stargazer(model1,model2,model4, type = "text")
+
+
+?stargazer
 
 #filtering on d21 and considering marriages at any point in time
 #current output: if the first brother's wife lives longer than 10 years after marriage, whereas 
