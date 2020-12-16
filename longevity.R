@@ -116,6 +116,8 @@ sons = foe_copy %>%
          byr_son = byr,
          d40_son = d40,
          myr1_son = myr1, #year of first marriage
+         myr_2_son = myr_2, #year of second marriage
+         myr_3_son = myr_3,#year of third marriage
          pid_fath) #join predicate , father id
 
 
@@ -160,8 +162,10 @@ brothers = foe_copy %>%
          spouse_dyr_broth = spouse_dyr, #the death year of the brother's spouse
          spouse_d40_broth = spouse_d40,
          myr1_broth = myr1, #the year the brother got married
-         byr_broth = byr,
-         d40_broth = d40,
+         myr_2_broth = myr_2,#year of second marriage
+         myr_3_broth = myr_3, #3rd marriage year
+         byr_broth = byr, 
+         d40_broth = d40, #dummy for whether or not they lived to age 40
          pid_fath) #join predicate , father id
 
 
@@ -245,8 +249,9 @@ regSample2 = family %>% filter(d40_son == 1 & d40_broth == 1) #only want to cons
 regSample2 = regSample2 %>% 
   filter((myr1_son < byr_son + 40) | is.na(myr1_son)) %>% #throws out people getting 
 #marriage after age 40 but not people who never got married
-  filter((myr1_broth < byr_broth + 40) | is.na(myr1_broth))
+  filter((myr1_broth < byr_broth + 40) | is.na(myr1_broth)) %>% 
 #if their marriage year is less than their birth year + 40, keep
+  filter(is.na(myr_2_son)&is.na(myr_3_son) & is.na(myr_2_broth) & is.na(myr_3_broth))#no 2nd or 3rd marriage
 
 
 #is.na returns TRUE if the value is NA, otherwise it returns FALSE
@@ -351,7 +356,8 @@ regSample3 = regSample3 %>%
   mutate(marriage_length_diff20_30 = as.numeric(marriage_length_diff >=20 & marriage_length_diff < 30)) %>%
   mutate(marriage_length_diff30_40 = as.numeric(marriage_length_diff >=30 & marriage_length_diff < 40)) %>%
   mutate(marriage_length_diff40_50 = as.numeric(marriage_length_diff >=40)) %>% 
-  filter(!is.na(marriage_length_diff))
+  filter(!is.na(marriage_length_diff)) %>% 
+  filter(is.na(myr_2_son)&is.na(myr_3_son) & is.na(myr_2_broth) & is.na(myr_3_broth))
 
 
 
@@ -384,22 +390,22 @@ delta_long_marriage = long_marriage_son - long_marriage_broth #
 
 
 
-model3 = lm(delta_dage ~ delta_long_marriage + delta_ded + 
-              delta_Occrank + same_regbirth)
+#model3 = lm(delta_dage ~ delta_long_marriage + delta_ded + 
+              #delta_Occrank + same_regbirth)
 
-model4 = lm(delta_dage ~ 0 + marriage_length_diff0_10
+model3 = lm(delta_dage ~ 0 + delta_Occrank+ marriage_length_diff0_10
             + marriage_length_diff10_20 + marriage_length_diff20_30 + marriage_length_diff30_40+
               marriage_length_diff40_50, data = regSample3)
 
-summary(model4)
+summary(model3)
 
 
 
 #create visualization
-marriage_length_df = data.frame(model4$coefficients)
-summaryModel4 = summary(model4)$coefficients[,c(2)]
+marriage_length_df = data.frame(model3$coefficients)
+summaryModel3 = summary(model3)$coefficients[,c(2)]
 
-marriage_length_df = cbind(marriage_length_df,summaryModel4)
+marriage_length_df = cbind(marriage_length_df,summaryModel3)
 
 
 names(marriage_length_df) = c("coefficients", "standard_errors")
@@ -435,7 +441,7 @@ stargazer(model3, type = "latex", title = "Regression Table: Model 3",
 
 #stargazer table with all the results from each model
 
-stargazer(model1,model2,model4, type = "text")
+stargazer(model1,model2,model3, type = "text",column.labels = c("Model 1:", "Model 2:", "Model 3:"))
 
 
 ?stargazer
