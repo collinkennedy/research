@@ -62,7 +62,9 @@ if(!exists("foe_copy")){
 
 #add d40 variable (indicator{1-> lived to 40, 0-> otherwise})
 foe_copy = foe_copy %>% 
-  mutate(d40 = ifelse(dage >= 40, 1, 0))
+  mutate(d40 = ifelse(dage >= 40, 1, 0))  
+  
+
 
 
 
@@ -113,6 +115,7 @@ sons = foe_copy %>%
          regbirth_son = regbirth, #region of birth 
          spouse_dyr_son = spouse_dyr,
          spouse_d40_son = spouse_d40,
+         spouse_byr_son = spouse_byr, #birth year of the son's spouse
          byr_son = byr,
          d40_son = d40,
          myr1_son = myr1, #year of first marriage
@@ -138,7 +141,7 @@ fathers = foe_copy %>%
          lnwealth_fath = lnw,
          inherited_lnwealth)
 
-View(fathers)
+
 
 #merge sons and fathers
 sons_and_fathers = inner_join(sons,fathers)
@@ -161,6 +164,7 @@ brothers = foe_copy %>%
          regbirth_broth = regbirth, #region of birth 
          spouse_dyr_broth = spouse_dyr, #the death year of the brother's spouse
          spouse_d40_broth = spouse_d40,
+         spouse_byr_broth = spouse_byr,
          myr1_broth = myr1, #the year the brother got married
          myr_2_broth = myr_2,#year of second marriage
          myr_3_broth = myr_3, #3rd marriage year
@@ -360,7 +364,10 @@ regSample3 = regSample3 %>%
   filter(is.na(myr_2_son)&is.na(myr_3_son) & is.na(myr_2_broth) & is.na(myr_3_broth))#only married once
 
 
-
+#create a difference in age at marriage variable
+regSample3 = regSample3 %>% 
+  mutate(spouse_age_son = (myr1_son - spouse_byr_son)) %>% 
+  mutate(spouse_age_broth = (myr1_broth - spouse_byr_broth))
 
   
   
@@ -369,7 +376,8 @@ regSample3 = regSample3 %>%
 
 # delta_dage = regSample3$dage_son - regSample3$dage_broth
 # delta_ded = regSample3$ded_son - regSample3$ded_broth
-# delta_Occrank = regSample3$Occrank_son - regSample3$Occrank_broth
+delta_Occrank = regSample3$Occrank_son - regSample3$Occrank_broth
+delta_spouse_age = regSample3$spouse_age_son - regSample3$spouse_age_broth
 # same_regbirth = regSample3$regbirth_son == regSample3$regbirth_broth
 # 
 # long_marriage_son = (regSample3$spouse_dyr_son - regSample3$myr1_son) > 10 #categorical variable- 
@@ -383,7 +391,7 @@ regSample3 = regSample3 %>%
 
 
 #if the difference is greater than 
-delta_long_marriage = long_marriage_son - long_marriage_broth #
+#delta_long_marriage = long_marriage_son - long_marriage_broth #
 #1 if son has a long marriage but broth has a short marriage
 #0 if son and brother have "equal length" marriage
 #-1 if son has a SHORT marriage and broth has a long marriage
@@ -393,11 +401,14 @@ delta_long_marriage = long_marriage_son - long_marriage_broth #
 #model3 = lm(delta_dage ~ delta_long_marriage + delta_ded + 
               #delta_Occrank + same_regbirth)
 
-
+regSample3$byr_son
 
 #new model 3
-model3 = lm(delta_dage ~ 0 + delta_Occrank+ marriage_length_diff0_14
-            + marriage_length_diff15_29 + marriage_length_diff30_plus, data = regSample3)
+
+#robustness check: adding in delta_spouse_age
+model3 = felm(delta_dage ~ 0 + delta_Occrank+ marriage_length_diff0_14
+            + marriage_length_diff15_29 
+            + marriage_length_diff30_plus + delta_spouse_age , data = regSample3)
 
 summary(model3)
 
@@ -468,10 +479,10 @@ stargazer(model1,model2,model3, type = "text",column.labels = c("Model 1:", "Mod
 
 
 
-
+#Show this regression first
 #Model 3.5, run a regression on marriage_length_diff
-model3.5 = lm(delta_dage ~ marriage_length_diff + delta_Occrank + 
-                marriage_length_diff:marriage_length_diff, data = regSample3)
+model3.5 = lm(delta_dage ~ marriage_length_diff + delta_Occrank 
+                , data = regSample3)
 summary(model3.5)
 
 
@@ -481,97 +492,4 @@ summary(model3.5)
 
 
 
-
-#=======================================================================================
-
-#Model 3 Robustness Check
-
-#=======================================================================================
-#drop people who die in the same year as their wife
-#add death year variable to son and broth
-
-#in regsample3
-
-#alter cut off for long/short marriage -> maybe 5, 20
-
-
-#5 year cut off
-regSample4 = family %>% filter(dmarried_broth == 1 & dmarried_son == 1)%>% 
-  filter(d40_son == 1 & d40_broth == 1)#only want to consider when both brothers are married
-#filter on d40 instead of d21 (only include brothers living to at least age 40)
-
-
-#like in model 2, don't include people getting married after 40
-regSample4 = regSample4 %>% 
-  filter((myr1_son < byr_son + 40) | is.na(myr1_son)) %>% #throws out people getting 
-  #marriage after age 40 but not people who never got married
-  filter((myr1_broth < byr_broth + 40) | is.na(myr1_broth))
-
-delta_dage = regSample4$dage_son - regSample4$dage_broth
-#delta_dmarried = regSample$dmarried_son - regSample$dmarried_broth, don't need
-delta_ded = regSample4$ded_son - regSample4$ded_broth
-delta_Occrank = regSample4$Occrank_son - regSample4$Occrank_broth
-delta_d21 = regSample4$d21_son - regSample4$d21_broth
-same_regbirth = regSample4$regbirth_son == regSample4$regbirth_broth
-
-long_marriage_son = regSample4$spouse_dyr_son - regSample4$myr1_son > 40#categorical variable- 
-#if the marriage lasts at least 10 years before the spouse dies, then  ->1 , else 0
-
-#same thing but for the brother
-long_marriage_broth = regSample4$spouse_dyr_broth - regSample4$myr1_broth > 40
-
-#if the difference is greater than 
-delta_long_marriage = long_marriage_son - long_marriage_broth #
-#1 if son has a long marriage but broth has a short marriage
-#0 if son and brother have "equal length" marriage
-#-1 if son has a SHORT marriage and broth has a long marriage
-
-model4 = lm(delta_dage ~ delta_long_marriage + delta_ded + 
-              delta_Occrank + same_regbirth)
-
-summary(model4)
-
-
-#while 5 and 10 years results in delta_long_marriage being statistically insignificant, 20,30,40 all
-#result in statistically significant coefficient(s) for delta_long_marriage
-
-
-
-#interaction?
-
-regSample3 = family %>% filter(dmarried_broth == 1 & dmarried_son == 1)%>% 
-  filter(d40_son == 1 & d40_broth == 1)#only want to consider when both brothers are married
-#filter on d40 instead of d21 (only include brothers living to at least age 40)
-
-
-#like in model 2, don't include people getting married after 40
-regSample3 = regSample3 %>% 
-  filter((myr1_son < byr_son + 40) | is.na(myr1_son)) %>% #throws out people getting 
-  #marriage after age 40 but not people who never got married
-  filter((myr1_broth < byr_broth + 40) | is.na(myr1_broth))
-
-delta_dage = regSample3$dage_son - regSample3$dage_broth
-#delta_dmarried = regSample$dmarried_son - regSample$dmarried_broth, don't need
-delta_ded = regSample3$ded_son - regSample3$ded_broth
-delta_Occrank = regSample3$Occrank_son - regSample3$Occrank_broth
-delta_d21 = regSample3$d21_son - regSample3$d21_broth
-same_regbirth = regSample3$regbirth_son == regSample3$regbirth_broth
-
-long_marriage_son = regSample3$spouse_dyr_son - regSample3$myr1_son > 10 #categorical variable- 
-#if the marriage lasts at least 10 years before the spouse dies, then  ->1 , else 0
-
-#same thing but for the brother
-long_marriage_broth = regSample3$spouse_dyr_broth - regSample3$myr1_broth > 10
-
-#if the difference is greater than 
-delta_long_marriage = long_marriage_son - long_marriage_broth #
-#1 if son has a long marriage but broth has a short marriage
-#0 if son and brother have "equal length" marriage
-#-1 if son has a SHORT marriage and broth has a long marriage
-
-model3 = lm(delta_dage ~ delta_long_marriage + delta_long_marriage*delta_long_marriage +
-              delta_ded + 
-              delta_Occrank + same_regbirth)
-
-summary(model3)
 
