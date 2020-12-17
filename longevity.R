@@ -30,7 +30,7 @@ library(lfe) #for fixed effects
 library(stargazer) #for creating tables
 rm(list=setdiff(ls(),c("foe_copy")))
 
-
+View(foe_copy)
 
 #get data from FOE database
 if(!exists("foe_copy")){
@@ -195,7 +195,15 @@ ggplot(data = plotData40, mapping = aes(x = dage_son, y = dmarried_son))+
   geom_point()+
   geom_smooth(method = "lm", se=FALSE)
 
-
+#here I tried to visualize the relationship between dmarried and death age of sons. 
+#After I had done the bulk of my analysis, I realized or rather felt that I had irresponsibly and
+#blindly applied regression to this problem without even checking if there is even a remotely 
+#linear relationship between my primary variables of interest. This put my worries to rest.
+#In order to produce this plot, I subsetted my family dataframe by grouping by dage_son (which explains why there isn't
+#20,000+ observations), and plotted it against the mean numerical value of dmarried_son. dmarried_son
+#is a categorical variable, but by converting it to a numerical value and then taking the mean of it
+#for each group, and restricting the data to only include people that lived to at least 40,
+#the linear relationship is definitely more apparent.
 
 #this justifies the cut off age of 40, data appears to be roughly linear at that point going forward
 
@@ -328,36 +336,28 @@ regSample3 = family %>% filter(dmarried_broth == 1 & dmarried_son == 1)%>%
 #filter on d40 instead of d21 (only include brothers living to at least age 40)
 
 
-
-
-
-
 #like in model 2, don't include people getting married after 40
 regSample3 = regSample3 %>% 
-  filter((myr1_son < byr_son + 40) | is.na(myr1_son)) %>% #throws out people getting 
-  #marriage after age 40 but not people who never got married
+  filter((myr1_son < byr_son + 40) | is.na(myr1_son)) %>% #only want to consider
+  #people who either a) get married before 40, or b) don't get married at all
   filter((myr1_broth < byr_broth + 40) | is.na(myr1_broth)) %>% 
   mutate(marriage_length_son = spouse_dyr_son - myr1_son) %>% 
   mutate(marriage_length_broth = spouse_dyr_broth - myr1_broth) %>%  
   mutate(marriage_length_diff = marriage_length_son - marriage_length_broth) %>% 
   mutate(delta_dage = dage_son - dage_broth)
   
-  
 part1<-filter(regSample3, marriage_length_diff>=0)
 part2<-filter(regSample3,marriage_length_diff<0)%>%
   mutate(marriage_length_diff = -1*marriage_length_diff)%>%
   mutate(delta_dage = -1*delta_dage)
-
 regSample3<-bind_rows(part1,part2)
 
 regSample3 = regSample3 %>% 
-  mutate(marriage_length_diff0_10 = as.numeric(marriage_length_diff >=0 & marriage_length_diff < 10)) %>% 
-  mutate(marriage_length_diff10_20 = as.numeric(marriage_length_diff >=10 & marriage_length_diff < 20)) %>%
-  mutate(marriage_length_diff20_30 = as.numeric(marriage_length_diff >=20 & marriage_length_diff < 30)) %>%
-  mutate(marriage_length_diff30_40 = as.numeric(marriage_length_diff >=30 & marriage_length_diff < 40)) %>%
-  mutate(marriage_length_diff40_50 = as.numeric(marriage_length_diff >=40)) %>% 
+  mutate(marriage_length_diff0_14 = as.numeric(marriage_length_diff >=0 & marriage_length_diff < 15)) %>% 
+  mutate(marriage_length_diff15_29 = as.numeric(marriage_length_diff >=15 & marriage_length_diff <30 )) %>%
+  mutate(marriage_length_diff30_plus = as.numeric(marriage_length_diff >=30)) %>%
   filter(!is.na(marriage_length_diff)) %>% 
-  filter(is.na(myr_2_son)&is.na(myr_3_son) & is.na(myr_2_broth) & is.na(myr_3_broth))
+  filter(is.na(myr_2_son)&is.na(myr_3_son) & is.na(myr_2_broth) & is.na(myr_3_broth))#only married once
 
 
 
@@ -367,16 +367,16 @@ regSample3 = regSample3 %>%
 
   
 
-delta_dage = regSample3$dage_son - regSample3$dage_broth
-delta_ded = regSample3$ded_son - regSample3$ded_broth
-delta_Occrank = regSample3$Occrank_son - regSample3$Occrank_broth
-same_regbirth = regSample3$regbirth_son == regSample3$regbirth_broth
-
-long_marriage_son = (regSample3$spouse_dyr_son - regSample3$myr1_son) > 10 #categorical variable- 
-#if the marriage lasts at least 10 years before the spouse dies, then  ->1 , else 0
-
-#same thing but for the brother
-long_marriage_broth = (regSample3$spouse_dyr_broth - regSample3$myr1_broth) > 10
+# delta_dage = regSample3$dage_son - regSample3$dage_broth
+# delta_ded = regSample3$ded_son - regSample3$ded_broth
+# delta_Occrank = regSample3$Occrank_son - regSample3$Occrank_broth
+# same_regbirth = regSample3$regbirth_son == regSample3$regbirth_broth
+# 
+# long_marriage_son = (regSample3$spouse_dyr_son - regSample3$myr1_son) > 10 #categorical variable- 
+# #if the marriage lasts at least 10 years before the spouse dies, then  ->1 , else 0
+# 
+# #same thing but for the brother
+# long_marriage_broth = (regSample3$spouse_dyr_broth - regSample3$myr1_broth) > 10
 
 
 
@@ -393,27 +393,32 @@ delta_long_marriage = long_marriage_son - long_marriage_broth #
 #model3 = lm(delta_dage ~ delta_long_marriage + delta_ded + 
               #delta_Occrank + same_regbirth)
 
-model3 = lm(delta_dage ~ 0 + delta_Occrank+ marriage_length_diff0_10
-            + marriage_length_diff10_20 + marriage_length_diff20_30 + marriage_length_diff30_40+
-              marriage_length_diff40_50, data = regSample3)
+
+
+#new model 3
+model3 = lm(delta_dage ~ 0 + delta_Occrank+ marriage_length_diff0_14
+            + marriage_length_diff15_29 + marriage_length_diff30_plus, data = regSample3)
 
 summary(model3)
 
 
 
 #create visualization
-marriage_length_df = data.frame(model3$coefficients)
-summaryModel3 = summary(model3)$coefficients[,c(2)]
+marriage_length_df = data.frame(model3$coefficients[2:4])#all coefficients except Occrank (just dummies)
+summaryModel3 = summary(model3)$coefficients[,c(2)] #all standard errors except Occrank again
 
-marriage_length_df = cbind(marriage_length_df,summaryModel3)
+
+summary(model3)$coefficients
+
+marriage_length_df = cbind(marriage_length_df,summaryModel3[2:4])#don't want occrank
 
 
 names(marriage_length_df) = c("coefficients", "standard_errors")
 marriage_length_df = mutate(marriage_length_df, CI_Upper = 1.96*standard_errors + coefficients)
 marriage_length_df = mutate(marriage_length_df, CI_Lower = coefficients - 1.96*standard_errors)
-marriage_length_df$death_age_difference = c("0-9","10 - 19","20-29","30-39","40+")
+marriage_length_df$death_age_difference = c("0-14","15 - 29","30+")
 
-View(marriage_length_df)
+
 
 death_age_plot = ggplot(data = marriage_length_df, mapping = aes(x = death_age_difference, y = coefficients))+
   geom_point()+
@@ -427,7 +432,7 @@ death_age_plot = ggplot(data = marriage_length_df, mapping = aes(x = death_age_d
 
 death_age_plot
 
-#95% confidence interval
+
 
 #Interpretation:
 
@@ -459,6 +464,24 @@ stargazer(model1,model2,model3, type = "text",column.labels = c("Model 1:", "Mod
 #of different lengths
 
 #interpret as a zero effect
+
+
+
+
+
+#Model 3.5, run a regression on marriage_length_diff
+model3.5 = lm(delta_dage ~ marriage_length_diff + delta_Occrank + 
+                marriage_length_diff:marriage_length_diff, data = regSample3)
+summary(model3.5)
+
+
+
+
+
+
+
+
+
 #=======================================================================================
 
 #Model 3 Robustness Check
