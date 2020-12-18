@@ -404,24 +404,44 @@ delta_spouse_age = regSample3$spouse_age_son - regSample3$spouse_age_broth
 regSample3$byr_son
 
 #new model 3
-
-#robustness check: adding in delta_spouse_age
-model3 = felm(delta_dage ~ 0 + delta_Occrank+ marriage_length_diff0_14
-            + marriage_length_diff15_29 
-            + marriage_length_diff30_plus + delta_spouse_age , data = regSample3)
-
+#Show this regression first
+#Model 3.5, run a regression on marriage_length_diff
+model3 = lm(delta_dage ~ marriage_length_diff + delta_Occrank 
+              , data = regSample3)
 summary(model3)
 
 
 
+
+
+
+#robustness check: adding in delta_spouse_age, how do results change?
+model3Robust = felm(delta_dage ~ 0 + delta_Occrank+ marriage_length_diff0_14
+            + marriage_length_diff15_29 
+            + marriage_length_diff30_plus + delta_spouse_age , data = regSample3)
+
+summary(model3Robust)
+
+
+stargazer(model3,model3Robust)
+
+
+
+
+
+
+model3Robust$coefficients[2:4]
+
+
+
 #create visualization
-marriage_length_df = data.frame(model3$coefficients[2:4])#all coefficients except Occrank (just dummies)
-summaryModel3 = summary(model3)$coefficients[,c(2)] #all standard errors except Occrank again
+marriage_length_df = data.frame(model3Robust$coefficients[2:4])#all coefficients except Occrank (just dummies)
+summaryModel3Robust = summary(model3Robust)$coefficients[,c(2)] #all standard errors except Occrank again
 
 
-summary(model3)$coefficients
+summary(model3Robust)$coefficients
 
-marriage_length_df = cbind(marriage_length_df,summaryModel3[2:4])#don't want occrank
+marriage_length_df = cbind(marriage_length_df,summaryModel3Robust[2:4])#don't want occrank
 
 
 names(marriage_length_df) = c("coefficients", "standard_errors")
@@ -479,11 +499,6 @@ stargazer(model1,model2,model3, type = "text",column.labels = c("Model 1:", "Mod
 
 
 
-#Show this regression first
-#Model 3.5, run a regression on marriage_length_diff
-model3.5 = lm(delta_dage ~ marriage_length_diff + delta_Occrank 
-                , data = regSample3)
-summary(model3.5)
 
 
 
