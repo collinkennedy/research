@@ -347,20 +347,20 @@ regSample3 = regSample3 %>%
   filter((myr1_broth < byr_broth + 40) | is.na(myr1_broth)) %>% 
   mutate(marriage_length_son = spouse_dyr_son - myr1_son) %>% 
   mutate(marriage_length_broth = spouse_dyr_broth - myr1_broth) %>%  
-  mutate(marriage_length_diff = marriage_length_son - marriage_length_broth) %>% 
+  mutate(delta_marriage_length = marriage_length_son - marriage_length_broth) %>% 
   mutate(delta_dage = dage_son - dage_broth)
   
-part1<-filter(regSample3, marriage_length_diff>=0)
-part2<-filter(regSample3,marriage_length_diff<0)%>%
-  mutate(marriage_length_diff = -1*marriage_length_diff)%>%
+part1<-filter(regSample3, delta_marriage_length>=0)
+part2<-filter(regSample3,delta_marriage_length<0)%>%
+  mutate(delta_marriage_length = -1*delta_marriage_length)%>%
   mutate(delta_dage = -1*delta_dage)
 regSample3<-bind_rows(part1,part2)
 
 regSample3 = regSample3 %>% 
-  mutate(marriage_length_diff0_14 = as.numeric(marriage_length_diff >=0 & marriage_length_diff < 15)) %>% 
-  mutate(marriage_length_diff15_29 = as.numeric(marriage_length_diff >=15 & marriage_length_diff <30 )) %>%
-  mutate(marriage_length_diff30_plus = as.numeric(marriage_length_diff >=30)) %>%
-  filter(!is.na(marriage_length_diff)) %>% 
+  mutate(delta_marriage_length0_14 = as.numeric(delta_marriage_length >=0 & delta_marriage_length < 15)) %>% 
+  mutate(delta_marriage_length15_29 = as.numeric(delta_marriage_length >=15 & delta_marriage_length <30 )) %>%
+  mutate(delta_marriage_length30_plus = as.numeric(delta_marriage_length >=30)) %>%
+  filter(!is.na(delta_marriage_length)) %>% 
   filter(is.na(myr_2_son)&is.na(myr_3_son) & is.na(myr_2_broth) & is.na(myr_3_broth))#only married once
 
 
@@ -405,25 +405,31 @@ regSample3$byr_son
 
 #new model 3
 #Show this regression first
-#Model 3.5, run a regression on marriage_length_diff
-model3 = lm(delta_dage ~ marriage_length_diff + delta_Occrank 
-              , data = regSample3)
-summary(model3)
+#Model 3 run a regression on delta_marriage_length
+model3 =felm(delta_dage ~ 0 + delta_Occrank+ delta_marriage_length0_14+
+                               delta_marriage_length15_29 +
+                               delta_marriage_length30_plus, data = regSample3)
+
+#save output
+stargazer(model3, type = "latex", title = "Model 3: Regression Table", 
+          out = "/Users/collinkennedy/Google Drive/UC Davis/UC Davis/fall_quarter_2020/ECN198-Research/model3out.tex")
 
 
 
-
+#should i do model 3, then this model3Robust, or treat model3Robust - delta_spouse_age as my model 3,
+#then add in delta_spouse_age as the new control/robustness check???
 
 
 #robustness check: adding in delta_spouse_age, how do results change?
-model3Robust = felm(delta_dage ~ 0 + delta_Occrank+ marriage_length_diff0_14
-            + marriage_length_diff15_29 
-            + marriage_length_diff30_plus + delta_spouse_age , data = regSample3)
+model3Robust = felm(delta_dage ~ 0 + delta_Occrank+ delta_marriage_length0_14
+            + delta_marriage_length15_29 
+            + delta_marriage_length30_plus + delta_spouse_age, data = regSample3)
 
 summary(model3Robust)
 
 
-stargazer(model3,model3Robust)
+stargazer(model3,model3Robust, type = "latex", title = "Robustness Check", 
+          out = "/Users/collinkennedy/Google Drive/UC Davis/UC Davis/fall_quarter_2020/ECN198-Research/robustness_table.tex")
 
 
 
@@ -463,6 +469,7 @@ death_age_plot = ggplot(data = marriage_length_df, mapping = aes(x = death_age_d
 
 death_age_plot
 
+ggsave(filename = "/Users/collinkennedy/Google Drive/UC Davis/UC Davis/fall_quarter_2020/ECN198-Research/death_age_plot.tex", death_age_plot)
 
 
 #Interpretation:
@@ -477,10 +484,10 @@ stargazer(model3, type = "latex", title = "Regression Table: Model 3",
 
 #stargazer table with all the results from each model
 
-stargazer(model1,model2,model3, type = "text",column.labels = c("Model 1:", "Model 2:", "Model 3:"))
+#stargazer(model1,model2,model3, type = "text",column.labels = c("Model 1:", "Model 2:", "Model 3:"))
 
 
-?stargazer
+
 
 #filtering on d21 and considering marriages at any point in time
 #current output: if the first brother's wife lives longer than 10 years after marriage, whereas 
