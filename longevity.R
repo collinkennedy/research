@@ -1,4 +1,4 @@
-#How are educational and occupational success associated with Longevity?
+#How is marriage associated with Longevity?
 
 #variables of immediate concern and relevance:---------------------------------------------
 #pid:	Unique person ID
@@ -30,7 +30,7 @@ library(lfe) #for fixed effects
 library(stargazer) #for creating tables
 rm(list=setdiff(ls(),c("foe_copy")))
 
-View(foe_copy)
+
 
 #get data from FOE database
 if(!exists("foe_copy")){
@@ -197,7 +197,13 @@ plotData40 = plotData %>%
   filter(dmarried_son>0)
 ggplot(data = plotData40, mapping = aes(x = dage_son, y = dmarried_son))+
   geom_point()+
-  geom_smooth(method = "lm", se=FALSE)
+  geom_smooth(method = "lm", se=FALSE)+
+  labs(title = "Proportion of Sons that Married,",subtitle = "grouped by Death Age")+
+  ylab("Proportion of Sons that Married")+
+  xlab("Death Age")
+
+
+ggsave(filename = "/Users/collinkennedy/Google Drive/UC Davis/UC Davis/fall_quarter_2020/ECN198-Research/dmarried_vs_dage.png")
 
 #here I tried to visualize the relationship between dmarried and death age of sons. 
 #After I had done the bulk of my analysis, I realized or rather felt that I had irresponsibly and
@@ -241,8 +247,9 @@ summary(model1)
 
 stargazer(model1,type = "text", title = "Regression Table: Model 1")
 stargazer(type = "latex", model1, title = "Regression Table: Model 1",
-          out = "/Users/collinkennedy/Google Drive/UC Davis/UC Davis/fall_quarter_2020/ECN198-Research/model1out.tex")
+          out = "/Users/collinkennedy/Google Drive/UC Davis/UC Davis/fall_quarter_2020/ECN198-Research/model1out.png")
 
+?stargazer
 #========================================================================================
 #H0: ∆Xdmarried= 0 (dmarried_son - dmarried_broth)
 #Ha: ∆Xdmarried6 != 0
@@ -279,6 +286,7 @@ delta_d21 = regSample2$d21_son - regSample2$d21_broth
 same_regbirth = regSample2$regbirth_son == regSample2$regbirth_broth #categorical
 
 
+
 #try some other death age cut offs.............
 
 #?lm_robust()
@@ -295,26 +303,11 @@ stargazer(model2, type = "text", title = "Regression Table: Model 2")
 stargazer(model2, type = "latex", title = "Regression Table: Model 2",
           out = "/Users/collinkennedy/Google Drive/UC Davis/UC Davis/fall_quarter_2020/ECN198-Research/model2out.tex")
 
-#output interpretation: Reject the null hypothesis at the 5% significance level in favor
-#of the alternative hypothesis, and conclude that delta_dmarried has a nonzero effect on the difference in 
-#death age between brothers.
-
-#when filtering on d21_son and d21_broth == 1
-#In other words, for brothers who both live to at least 21, the brother who gets married lives about 13.6 years
-#longer on average, holding difference in educational achievement, difference in occupation rank,.
-
-
-#when filtering on d40_son and d40_broth == 1
-#In other words, for brothers who both live to at least 40, the brother who gets married lives about 2.73 years
-#longer on average, holding difference in educational achievement, difference in occupation rank,.
-
 
 #when filtering on d40_son and d40_broth == 1, but only looking at brothers
-#who also married before age 40, the son who got married appears to live about 2.957
+#who also married before age 40, the son who got married appears to live about 2.6
 #years longer on average, after controlling for differences in educational achievement,occupational
 #rank, and region of birth
-
-
 
 
 
@@ -323,8 +316,6 @@ stargazer(model2, type = "latex", title = "Regression Table: Model 2",
 #not get married?
 #still uncertain if this is a causal relationship, but the finding is still interesting considering
 #sample size and the controls
-
-
 
 
 
@@ -411,6 +402,7 @@ model3 =felm(delta_dage ~ 0 + delta_Occrank+ delta_marriage_length0_14+
                                delta_marriage_length30_plus, data = regSample3)
 
 #save output
+stargazer(model3,type = "text",title = "Model 3: Regression Table" )
 stargazer(model3, type = "latex", title = "Model 3: Regression Table", 
           out = "/Users/collinkennedy/Google Drive/UC Davis/UC Davis/fall_quarter_2020/ECN198-Research/model3out.tex")
 
@@ -426,6 +418,8 @@ model3Robust = felm(delta_dage ~ 0 + delta_Occrank+ delta_marriage_length0_14
             + delta_marriage_length30_plus + delta_spouse_age, data = regSample3)
 
 summary(model3Robust)
+
+stargazer(model3,model3Robust, type = "text", title = "Robustness Check")
 
 
 stargazer(model3,model3Robust, type = "latex", title = "Robustness Check", 
@@ -469,7 +463,7 @@ death_age_plot = ggplot(data = marriage_length_df, mapping = aes(x = death_age_d
 
 death_age_plot
 
-ggsave(filename = "/Users/collinkennedy/Google Drive/UC Davis/UC Davis/fall_quarter_2020/ECN198-Research/death_age_plot.tex", death_age_plot)
+ggsave(filename = "/Users/collinkennedy/Google Drive/UC Davis/UC Davis/fall_quarter_2020/ECN198-Research/death_age_plot.png", death_age_plot)
 
 
 #Interpretation:
@@ -499,9 +493,6 @@ stargazer(model3, type = "latex", title = "Regression Table: Model 3",
 #younger than 40 when they get married,
 #there appears to be no statistically discernible difference in longevity
 #between brothers who both marry before 40, who live to at least 40, but whose marriages are
-#of different lengths
-
-#interpret as a zero effect
 
 
 
